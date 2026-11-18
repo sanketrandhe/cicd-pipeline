@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = 'sanketrandhe/day14-python-app'
+        IMAGE_TAG = 'v1'
+    }
+
     stages {
 
         stage('Verify Environment') {
@@ -27,19 +32,31 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'Docker image build will happen here'
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f docker/Dockerfile .
+                '''
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo 'Docker Hub push will happen here'
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_TOKEN'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker logout
+                    '''
+                }
             }
         }
 
         stage('Deploy to AWS EC2') {
             steps {
-                echo 'AWS EC2 deployment will happen here'
+                echo 'Deployment will be configured next'
             }
         }
     }
